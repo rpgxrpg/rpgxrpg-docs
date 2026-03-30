@@ -27,7 +27,7 @@ rpgxrpg-docs/
 ├── 🔌 api/             # Contrato das rotas e payloads
 ├── 🗄️  database/       # Documentação do schema do banco
 ├── 🃏 game-system/     # Sistema de regras MXM e fichas de personagem
-└── 🎯 mvp/             # Escopo e requisitos do MVP
+└── 🎯 requisitos/      # Escopo e requisitos do sistema (do MVP até futuras features)
 ```
 
 ---
