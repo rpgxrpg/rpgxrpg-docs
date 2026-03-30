@@ -1,0 +1,399 @@
+// ============================================================
+// RPGxRPG — Schema do Banco de Dados
+// ============================================================
+
+// ==================== ENUMS ====================
+
+enum tipo_personagem {
+  personagem
+  invocacao
+  npc
+}
+
+enum tipo_aura {
+  reforco
+  transmutacao
+  emissao
+  manipulacao
+  materializacao
+  especializacao
+}
+
+enum tipo_sessao {
+  solo
+  grupo
+}
+
+enum status_personagem {
+  desaparecido
+  morto
+  aposentado
+  ativo
+}
+
+enum nivel_hunter {
+  iniciante
+  veterano
+  uma_estrela
+  duas_estrelas
+  tres_estrelas
+}
+
+enum alcance_arma {
+  corpo_corpo
+  curto
+  medio
+  longo
+}
+
+enum familia_arma {
+  laminas_curtas
+  laminas_longas
+  contundentes_curtas
+  contundentes_longas
+  lancas
+  machados
+  pistolas
+  escopetas
+  submetralhadoras
+  fuzis_assalto
+  fuzis_precisao
+  metralhadoras_pesadas
+  lanca_chamas
+  lanca_granadas
+  lanca_foguetes
+  outros_propulsao
+  outros_flexiveis
+  outros_exoticas
+}
+
+enum tipo_usuario {
+  mestre
+  jogador
+}
+
+enum status_campanha {
+  ativa
+  suspensa
+  encerrada
+}
+
+enum qualidade_defeito {
+  qualidade
+  defeito
+}
+
+enum habilidade {
+  // Físicas
+  atletismo
+  briga
+  conducao
+  furtividade
+  ladroagem
+  oficios
+  sobrevivencia
+  armas_brancas
+  armas_de_fogo
+  // Sociais
+  empatia
+  empatia_animal
+  etiqueta
+  expressao
+  intimidacao
+  lideranca
+  manha
+  persuasao
+  subterfugio
+  // Mentais
+  ciencia
+  erudicao
+  financas
+  investigacao
+  medicina
+  ocultismo
+  percepcao
+  politica
+  tecnologia
+}
+
+enum antecedente {
+  recursos
+  contatos
+  fama
+  influencia
+  aliados
+  lealdade
+  equipamento_especial
+  acesso_info
+  base_operacoes
+  mentor
+}
+
+// ==================== USUÁRIOS E CAMPANHAS ====================
+
+Table usuario {
+  id integer [primary key]
+  nome_usuario varchar [not null]
+  email varchar [not null, unique]
+  senha varchar [not null]
+}
+
+Table campanha {
+  id integer [primary key]
+  numero integer
+  titulo varchar [not null]
+  criado_por integer [not null, ref: > usuario.id]
+  status status_campanha [not null]
+}
+
+Table usuario_campanha {
+  usuario_id integer [ref: > usuario.id]
+  campanha_id integer [ref: > campanha.id]
+  papel tipo_usuario [not null]
+
+  indexes {
+    (usuario_id, campanha_id) [pk]
+  }
+}
+
+// ==================== PERSONAGEM — NÚCLEO ====================
+
+Table personagem {
+  id integer [primary key]
+  nome varchar [not null]
+  usuario_id integer [ref: > usuario.id]
+  tipo_ficha tipo_personagem [not null]
+  nivel_hunter nivel_hunter
+  afinidade_aura tipo_aura
+
+  // Nen — valores derivados do sistema MXM (sujeitos a revisão)
+  potencia_aura integer
+  dominio_nen integer
+  recuperacao_aura integer
+  recuperacao_zetsu integer
+
+  // Atributos Físicos
+  forca integer
+  destreza integer
+  vigor integer
+
+  // Atributos Sociais
+  carisma integer
+  manipulacao integer
+  autocontrole integer
+
+  // Atributos Mentais
+  inteligencia integer
+  raciocinio integer
+  determinacao integer
+}
+
+Table personagem_campanha {
+  personagem_id integer [ref: > personagem.id]
+  campanha_id integer [ref: > campanha.id]
+  nativo boolean [not null]
+  status_campanha status_personagem [not null]
+
+  indexes {
+    (personagem_id, campanha_id) [pk]
+  }
+}
+
+// Estado volátil separado do núcleo para não poluir a entidade principal
+Table personagem_estado {
+  personagem_id integer [pk, ref: - personagem.id]
+  dano_superficial integer
+  dano_agravado integer
+  forca_de_vontade_atual integer
+  aura_atual integer
+}
+
+// ==================== PERSONAGEM — ATRIBUTOS DERIVADOS ====================
+
+Table personagem_habilidade {
+  personagem_id integer [ref: > personagem.id]
+  habilidade habilidade [not null]
+  pontos integer [not null]
+
+  indexes {
+    (personagem_id, habilidade) [pk]
+  }
+}
+
+Table personagem_especializacao {
+  personagem_id integer [ref: > personagem.id]
+  habilidade habilidade [not null]
+  nome_especializacao varchar [not null]
+
+  indexes {
+    (personagem_id, habilidade) [pk]
+  }
+}
+
+Table personagem_antecedente {
+  personagem_id integer [ref: > personagem.id]
+  antecedente antecedente [not null]
+  pontos integer [not null]
+
+  indexes {
+    (personagem_id, antecedente) [pk]
+  }
+}
+
+Table personagem_disciplina {
+  personagem_id integer [ref: > personagem.id]
+  afinidade_aura tipo_aura [not null]
+  pontos integer [not null]
+
+  indexes {
+    (personagem_id, afinidade_aura) [pk]
+  }
+}
+
+Table vantagem_desvantagem {
+  id integer [primary key]
+  nome varchar [not null]
+  descricao varchar
+  tipo qualidade_defeito [not null]
+  pontos integer [not null]
+}
+
+Table personagem_vantagem {
+  personagem_id integer [ref: > personagem.id]
+  vantagens_id integer [ref: > vantagem_desvantagem.id]
+  pontos integer [not null]
+
+  indexes {
+    (personagem_id, vantagens_id) [pk]
+  }
+}
+
+// ==================== PERSONAGEM — COMBATE ====================
+
+Table estilo {
+  id integer [primary key]
+  nome varchar [not null]
+  passiva varchar
+  tecnica_assinatura varchar
+  maestria_suprema varchar
+  habilidade habilidade [not null]
+}
+
+Table personagem_estilo {
+  personagem_id integer [ref: > personagem.id]
+  estilo_id integer [ref: > estilo.id]
+
+  indexes {
+    (personagem_id, estilo_id) [pk]
+  }
+}
+
+Table tecnica {
+  id integer [primary key]
+  personagem_id integer [ref: > personagem.id]
+  aura tipo_aura
+  nivel integer
+  nome varchar [not null]
+  custo_aura integer
+  dados varchar
+  resistencia varchar
+  duracao varchar
+}
+
+// ==================== ARMAS ====================
+
+Table arma {
+  id integer [primary key]
+  familia familia_arma [not null]
+  custo integer
+  pa integer
+  dano varchar
+  alcance_precisao alcance_arma
+  alcance_maximo alcance_arma
+}
+
+Table propriedade_arma {
+  id integer [primary key]
+  nome varchar [not null]
+  descricao varchar
+}
+
+Table arma_propriedade {
+  arma_id integer [ref: > arma.id]
+  propriedade_arma_id integer [ref: > propriedade_arma.id]
+
+  indexes {
+    (arma_id, propriedade_arma_id) [pk]
+  }
+}
+
+// Armas únicas ou genéricas associadas a uma campanha/personagem
+Table instancia_arma {
+  id integer [primary key]
+  arma_id integer [ref: > arma.id]
+  campanha_id integer [ref: > campanha.id]
+  personagem_id integer [ref: > personagem.id]
+  nome varchar
+  descricao varchar
+  localizacao varchar
+}
+
+Table instancia_arma_propriedade {
+  instancia_arma_id integer [ref: > instancia_arma.id]
+  propriedade_arma_id integer [ref: > propriedade_arma.id]
+
+  indexes {
+    (instancia_arma_id, propriedade_arma_id) [pk]
+  }
+}
+
+// ==================== CONSUMÍVEIS ====================
+
+Table consumivel {
+  id integer [primary key]
+  nome varchar [not null]
+  descricao varchar
+  pa integer
+  preco integer
+  alcance alcance_arma
+  efeito_principal varchar
+  efeito_reduzido varchar
+}
+
+Table consumivel_propriedade {
+  consumivel_id integer [ref: > consumivel.id]
+  propriedade_arma_id integer [ref: > propriedade_arma.id]
+
+  indexes {
+    (consumivel_id, propriedade_arma_id) [pk]
+  }
+}
+
+Table personagem_consumivel {
+  personagem_id integer [ref: > personagem.id]
+  consumivel_id integer [ref: > consumivel.id]
+  quantidade integer [not null]
+
+  indexes {
+    (personagem_id, consumivel_id) [pk]
+  }
+}
+
+// ==================== SESSÕES ====================
+
+Table sessao {
+  id integer [primary key]
+  data date [not null]
+  tipo tipo_sessao [not null]
+  campanha_id integer [ref: > campanha.id]
+}
+
+Table presenca {
+  personagem_id integer [ref: > personagem.id]
+  sessao_id integer [ref: > sessao.id]
+  pontos_xp integer
+
+  indexes {
+    (personagem_id, sessao_id) [pk]
+  }
+}
