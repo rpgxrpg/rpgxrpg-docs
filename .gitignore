@@ -1,0 +1,21 @@
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Geradores de site estático
+site/
+build/
+.docusaurus/
+
+# Node
+node_modules/
+
+# Temporários
+*.tmp
+*.log
