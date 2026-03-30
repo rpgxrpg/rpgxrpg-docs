@@ -1,0 +1,80 @@
+# ADR-003 — Escolha de Banco de Dados
+
+**Projeto:** RPGxRPG  
+**Status:** Aceito  
+**Data:** 2026-03-30  
+**Proprietário:** Luis Henrique S. Carvalho  
+
+---
+
+## Contexto
+
+O projeto RPGxRPG precisava definir o banco de dados do sistema, que deve suportar múltiplos usuários simultâneos durante sessões de jogo. Um fator crítico de infraestrutura: o projeto é desenvolvido em múltiplos computadores, então o ambiente do banco precisa ser reproduzível sem configuração manual a cada troca de máquina.
+
+As opções avaliadas foram:
+
+- **PostgreSQL:** banco relacional robusto, gratuito e amplamente adotado em produção;
+- **SQLite:** banco relacional embarcado, leve e sem necessidade de servidor dedicado;
+- **MySQL:** banco relacional popular com boa documentação.
+
+---
+
+## Decisão
+
+Foi decidido utilizar **PostgreSQL 16** como banco de dados, rodando via **Docker**, acessado através do **Prisma** como ORM.
+
+### PostgreSQL 16
+
+- Suporte robusto a múltiplos acessos concorrentes, essencial para sessões com vários jogadores simultâneos;
+- Gratuito e open source, sem custos de licenciamento;
+- Recursos avançados como tipos nativos, constraints e transactions consistentes com a complexidade do modelo de dados do sistema.
+
+### Docker
+
+- Elimina o problema de "funciona na minha máquina" — o ambiente do banco é idêntico em qualquer computador com Docker instalado;
+- Um único `docker-compose.yaml` sobe o banco com as credenciais corretas, sem instalação manual do PostgreSQL.
+
+### Prisma (ORM)
+
+- Geração automática de tipos TypeScript a partir do schema, garantindo consistência entre banco e código;
+- Migrações versionadas via `prisma migrate`, permitindo evolução controlada do schema ao longo do projeto;
+- O schema do Prisma funciona como fonte de verdade do modelo de dados, versionado junto ao repositório.
+
+### Alternativas descartadas
+
+- **SQLite:** descartado pelo comportamento de bloqueio em escritas concorrentes, incompatível com múltiplos jogadores acessando o sistema ao mesmo tempo;
+- **MySQL:** funcional, mas o PostgreSQL oferece recursos mais avançados e integração mais natural com o ecossistema moderno de TypeScript e Prisma.
+
+---
+
+## Consequências
+
+### Positivas
+
+- Ambiente reproduzível em qualquer máquina via Docker, eliminando fricção na troca de computadores;
+- Tipagem automática do Prisma reduz erros de inconsistência entre banco e código;
+- Migrações versionadas permitem rastrear a evolução do schema junto ao histórico de commits.
+
+### Negativas
+
+- Exige Docker instalado em todas as máquinas de desenvolvimento;
+- Configuração inicial mais trabalhosa do que SQLite, que funciona sem servidor.
+
+---
+
+## Conformidade
+
+- O banco de dados do projeto será PostgreSQL 16, sem adoção de outros SGBDs;
+- O banco deverá sempre rodar via Docker, nunca instalado diretamente na máquina;
+- Todo acesso ao banco deverá ser feito via Prisma, sem queries SQL manuais na camada de Application ou Domain;
+- O schema do Prisma é a fonte de verdade do modelo de dados e deverá ser mantido atualizado no repositório;
+- Migrações deverão ser geradas via `prisma migrate` e nunca aplicadas manualmente;
+- Qualquer mudança de SGBD deverá ser formalizada em nova ADR.
+
+---
+
+## Direcionadores
+
+- **Portabilidade:** Docker garante ambiente idêntico em múltiplas máquinas de desenvolvimento;
+- **Confiabilidade:** PostgreSQL garante consistência transacional em acessos concorrentes;
+- **Redução de dívida técnica:** Prisma com tipagem automática e migrações versionadas evita inconsistências entre banco e código ao longo do tempo.
